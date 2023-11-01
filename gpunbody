@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
-#include <GL/gl.h>//weird header
-#include <cuda_gl_interop.h>//weird header
+#include <GL/gl.h>
+#include <cuda_gl_interop.h>
 #include "timer.cuh"
 
 
@@ -17,7 +17,7 @@
  * as well as velocities in the x, y, and z directions.
  */
 
-typedef struct { float x, y, z, vx, vy, vz,mass; } Body;
+typedef struct { float x, y, z, vx, vy, vz, mass; } Body;
 
 /*
  * Calculate the gravitational impact of all bodies in the system
@@ -48,7 +48,7 @@ __global__ void bodyForce(Body* p, float dt, int n) {
     }
 }
 
- 
+
 int main(const int argc, const char** argv) {
 
     int deviceId;
@@ -104,10 +104,10 @@ int main(const int argc, const char** argv) {
     cudaMemPrefetchAsync(buf, size, deviceId);
 
     size_t threadsPerBlock;
-    size_t numberOfBlocks;
+   
 
     threadsPerBlock = 256;
-    numberOfBlocks = 32 * numberOfSMs;
+    size_t numberOfBlocks = (nBodies + threadsPerBlock - 1) / threadsPerBlock;
 
 
 
@@ -170,18 +170,18 @@ int main(const int argc, const char** argv) {
         // unrealistically high values.
         printf("%0.3f Billion Interactions / second\n", billionsOfOpsPerSecond);
 
-        cudaFree(buf);
-        // Cleanup resources
-       
-        return 0;
     }
+    cudaFree(buf);
 
+    // Cleanup resources
+
+    return 0;
 }
-        
-        
-        
-        
-       
-    
+
+
+
+
+
+
 
 
