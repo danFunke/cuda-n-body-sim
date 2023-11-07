@@ -157,14 +157,14 @@ int main(const int argc, const char** argv) {
 
     const float dt = 0.01f; // Time step
     const int nIters = 10;  // Simulation iterations
-    double totalTime = 0.0;
+    
 
     size_t threadsPerBlock = 128;
     size_t numberOfBlocks = (nBodies + threadsPerBlock - 1) / threadsPerBlock;
 
     for (int iter = 0; iter < nIters; iter++) {
         StartTimer();
-
+        double totalTime = 0.0;
         // Integrate positions based on velocities
         for (int i = 0; i < nBodies; i++) { // integrate position
             h_bodies.x[i] += h_bodies.vx[i] * dt;
@@ -192,8 +192,9 @@ int main(const int argc, const char** argv) {
         const double tElapsed = GetTimer() / 1000.0;
         totalTime += tElapsed;
         double avgTime = totalTime / (double)(nIters);
-        float billionsOfOpsPerSecond = 1e-9 * nBodies * nBodies / avgTime;
+        float billionsOfOpsPerSecond = 1e-9 * nBodies * (nBodies-1)/2 / avgTime;
         printf("%0.3f Billion Interactions / second\n", billionsOfOpsPerSecond);
+
     }
 
    
