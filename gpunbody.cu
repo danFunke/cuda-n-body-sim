@@ -116,7 +116,7 @@ int main(const int argc, const char** argv) {
 
 
 
-    double totalTime = 0.0;
+    
 
     /*
      * This simulation will run for 10 cycles of time, calculating gravitational
@@ -125,7 +125,7 @@ int main(const int argc, const char** argv) {
 
     for (int iter = 0; iter < nIters; iter++) {
         StartTimer();
-
+        double totalTime = 0.0;
         /*
          * You will likely wish to refactor the work being done in `bodyForce`,
          * and potentially the work to integrate the positions.
