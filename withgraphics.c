@@ -29,7 +29,9 @@ inline void cudaCheckError(const char* file, int line) {
  * as well as velocities in the x, y, and z directions.
  */
 
-struct Bodies { float* x, * y, * z, * vx, * vy, * vz, *mass; };    //p is now a struct with separate arrays for each component 
+struct Bodies { float* x, * y, * z, * vx, * vy, * vz, * mass;
+                float *r, * g, * b;
+};    //p is now a struct with separate arrays for each component 
 
 /*
  * Calculate the gravitational impact of all bodies in the system
@@ -117,6 +119,7 @@ void drawBodies(Bodies bodies, int nBodies) {
     glPointSize(2.0f);
     glBegin(GL_POINTS);
     for (int i = 0; i < nBodies; ++i) {
+        glColor4f(bodies.r[i], bodies.g[i], bodies.b[i],0.5f);
         glVertex3f(bodies.x[i], bodies.y[i], bodies.z[i]);
     }
     glEnd();
@@ -196,14 +199,59 @@ void lookAt(GLfloat eyeX, GLfloat eyeY, GLfloat eyeZ,
     glMultMatrixf(resultMatrix);
 }
 
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    // Make sure the viewport matches the new window dimensions
+    glViewport(0, 0, width, height);
+}
+
+// Define the center point of your galaxy
+float galaxyCenterX = 0.0f; // Adjust as needed
+float galaxyCenterY = 0.0f;
+float galaxyCenterZ = 0.0f;
+
+void updateBodyColors(Bodies bodies, int nBodies,float innerRadius, float outerRadius) {
+    for (int i = 0; i < nBodies; ++i) {
+        
+        float dx = bodies.x[i] - galaxyCenterX;
+        float dy = bodies.y[i] - galaxyCenterY;
+        float dz = bodies.z[i] - galaxyCenterZ;
+        float distance = sqrtf(dx * dx + dy * dy + dz * dz);
+
+        // Map the distance to a color
+        // Closer to center: Red-Yellow-Orange
+        // Further away: Blue to Purple
+        if (distance < 1.0) {
+            // Red to Yellow to Orange
+            bodies.r[i] = 1.0f; // Full red
+            bodies.g[i] = 1.0f * (distance / innerRadius); // Gradually add green
+            bodies.b[i] = 0.0f; // No blue
+        }
+        else {
+            // Blue to Purple
+            bodies.r[i] = 0.5f * ((distance - innerRadius) / (outerRadius - innerRadius)); // Gradually add red
+            bodies.g[i] = 0.0f; // No green
+            bodies.b[i] = 1.0f; // Full blue
+        }
+    }
+}
+float maxVelocity = 0.0f; // Initial value
+
+void updateMaxVelocity(Bodies bodies, int nBodies, float& maxVelocity) {
+    for (int i = 0; i < nBodies; ++i) {
+        float velocityMagnitude = sqrt(bodies.vx[i] * bodies.vx[i] + bodies.vy[i] * bodies.vy[i] + bodies.vz[i] * bodies.vz[i]);
+        if (velocityMagnitude > maxVelocity) {
+            maxVelocity = velocityMagnitude;
+        }
+    }
+}
 
 
 
 int main(const int argc, const char** argv) {
     int deviceId = 0;
     int numberOfSMs;
-   
-
+    float innerRadius = 1.0f, float outerRadius = 5.0f;
+    float maxVelocity = 1.2f;
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, deviceId);
     printf("Device name: %s\n", prop.name);
@@ -231,6 +279,10 @@ int main(const int argc, const char** argv) {
     h_bodies.vz = new float[nBodies];
     h_bodies.mass = new float[nBodies];
 
+    //colors
+    h_bodies.r = new float[nBodies];
+    h_bodies.g = new float[nBodies];
+    h_bodies.b = new float[nBodies];
     // Allocate device memory
     cudaMalloc(&d_bodies.x, nBodies * sizeof(float));
     cudaMalloc(&d_bodies.y, nBodies * sizeof(float));
@@ -240,8 +292,13 @@ int main(const int argc, const char** argv) {
     cudaMalloc(&d_bodies.vz, nBodies * sizeof(float));
     cudaMalloc(&d_bodies.mass, nBodies * sizeof(float));
     CHECK_CUDA_ERR();
+
+
     // Randomly initialize body values
     for (int i = 0; i < nBodies; i++) {
+        h_bodies.r[i] = rand() / (float)RAND_MAX;
+        h_bodies.g[i] = rand() / (float)RAND_MAX;
+        h_bodies.b[i] = rand() / (float)RAND_MAX;
         h_bodies.x[i] = rand() / (float)RAND_MAX * 2.0f - 1.0f;
         h_bodies.y[i] = rand() / (float)RAND_MAX * 2.0f - 1.0f;
         h_bodies.z[i] = rand() / (float)RAND_MAX * 2.0f - 1.0f;
@@ -279,7 +336,13 @@ int main(const int argc, const char** argv) {
         glfwTerminate();
         return -1;
     }
+ 
     glfwMakeContextCurrent(window);
+
+    // Register the resize callback
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+    // Continue with the rest of the initialization...
 
     // Set up viewport and projection
     int width, height;
@@ -327,6 +390,8 @@ int main(const int argc, const char** argv) {
         cudaMemcpy(h_bodies.vy, d_bodies.vy, nBodies * sizeof(float), cudaMemcpyDeviceToHost);
         cudaMemcpy(h_bodies.vz, d_bodies.vz, nBodies * sizeof(float), cudaMemcpyDeviceToHost);
 
+
+        updateBodyColors(h_bodies, nBodies, innerRadius, outerRadius);
         // Draw the bodies
         drawBodies(h_bodies, nBodies); // Make sure to implement this function
 
