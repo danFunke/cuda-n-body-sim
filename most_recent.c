@@ -1,4 +1,3 @@
-
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <math.h>
@@ -65,7 +64,7 @@ __global__ void bodyForce(Bodies p, float dt, int n) {
         }
         __syncthreads();
         // Now we calculate forces using the shared memory
-        #pragma unroll
+
         for (int j = 0; j < blockDim.x; ++j) {
             int sharedIdx = tile * blockDim.x + j;
             // Boundary check for the last tile
@@ -87,11 +86,9 @@ __global__ void bodyForce(Bodies p, float dt, int n) {
     }
 
     // Update velocities
-    if (index < n) {
-        p.vx[index] += dt * Fx;
-        p.vy[index] += dt * Fy;
-        p.vz[index] += dt * Fz;
-    }
+    p.vx[index] += dt * Fx;
+    p.vy[index] += dt * Fy;
+    p.vz[index] += dt * Fz;
 }
 
 
@@ -148,7 +145,7 @@ int main(const int argc, const char** argv) {
         h_bodies.mass[i] = rand() / (float)RAND_MAX * 10.0f + 0.1f; // Ensure mass is never zero
     }
 
-   
+
     cudaMemcpy(d_bodies.vx, h_bodies.vx, nBodies * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_bodies.vy, h_bodies.vy, nBodies * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_bodies.vz, h_bodies.vz, nBodies * sizeof(float), cudaMemcpyHostToDevice);
@@ -162,14 +159,10 @@ int main(const int argc, const char** argv) {
     size_t threadsPerBlock = 384;
     size_t numberOfBlocks = (nBodies + threadsPerBlock - 1) / threadsPerBlock;
     size_t sharedMemSize = 3 * threadsPerBlock * sizeof(float);
-
-
-
-
     double totalTime = 0.0;
     for (int iter = 0; iter < nIters; iter++) {
         StartTimer();
-        
+
         // Integrate positions based on velocities
         for (int i = 0; i < nBodies; i++) { // integrate position
             h_bodies.x[i] += h_bodies.vx[i] * dt;
@@ -184,17 +177,17 @@ int main(const int argc, const char** argv) {
 
         // Launch kernel to compute new velocities
         cudaSetDevice(0);
-       
+
         bodyForce << <numberOfBlocks, threadsPerBlock, sharedMemSize >> > (d_bodies, dt, nBodies);
         CHECK_CUDA_ERR();
         cudaDeviceSynchronize();
 
- 
+
 
         const double tElapsed = GetTimer() / 1000.0;
         totalTime += tElapsed;
-     
-        
+
+
     }
     double avgTime = totalTime / (double)(nIters);
     float billionsOfOpsPerSecond = 1e-9 * nBodies * (nBodies - 1) / 2 / avgTime;
