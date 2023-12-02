@@ -122,10 +122,10 @@ int main(const int argc, const char** argv) {
      * This simulation will run for 10 cycles of time, calculating gravitational
      * interaction amongst bodies, and adjusting their positions to reflect.
      */
-
+     double totalTime = 0.0;
     for (int iter = 0; iter < nIters; iter++) {
         StartTimer();
-        double totalTime = 0.0;
+       
         /*
          * You will likely wish to refactor the work being done in `bodyForce`,
          * and potentially the work to integrate the positions.
@@ -161,7 +161,10 @@ int main(const int argc, const char** argv) {
         totalTime += tElapsed;
 
 
-        double avgTime = totalTime / (double)(nIters);
+        
+
+    }
+     double avgTime = totalTime / (double)(nIters);
         float billionsOfOpsPerSecond = 1e-9 * nBodies * nBodies / avgTime;
 
 
@@ -169,8 +172,6 @@ int main(const int argc, const char** argv) {
         // but beware that a failure to correctly synchronize the device might result in
         // unrealistically high values.
         printf("%0.3f Billion Interactions / second\n", billionsOfOpsPerSecond);
-
-    }
     cudaFree(buf);
 
     // Cleanup resources
