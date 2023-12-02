@@ -25,7 +25,7 @@ inline void cudaCheckError(const char* file, int line) {
  * as well as velocities in the x, y, and z directions.
  */
 
-struct Bodies { float* x, * y, * z, * vx, * vy, * vz, *mass; };    //p is now a struct with separate arrays for each component 
+struct Bodies { float* x, * y, * z, * vx, * vy, * vz, * mass; };    //p is now a struct with separate arrays for each component 
 
 /*
  * Calculate the gravitational impact of all bodies in the system
@@ -157,14 +157,14 @@ int main(const int argc, const char** argv) {
 
     const float dt = 0.01f; // Time step
     const int nIters = 10;  // Simulation iterations
-    
+
 
     size_t threadsPerBlock = 128;
     size_t numberOfBlocks = (nBodies + threadsPerBlock - 1) / threadsPerBlock;
-
+    double totalTime = 0.0;
     for (int iter = 0; iter < nIters; iter++) {
         StartTimer();
-        double totalTime = 0.0;
+  
         // Integrate positions based on velocities
         for (int i = 0; i < nBodies; i++) { // integrate position
             h_bodies.x[i] += h_bodies.vx[i] * dt;
@@ -191,13 +191,13 @@ int main(const int argc, const char** argv) {
 
         const double tElapsed = GetTimer() / 1000.0;
         totalTime += tElapsed;
-        double avgTime = totalTime / (double)(nIters);
-        float billionsOfOpsPerSecond = 1e-9 * nBodies * (nBodies-1)/2 / avgTime;
-        printf("%0.3f Billion Interactions / second\n", billionsOfOpsPerSecond);
+      
 
     }
 
-   
+    double avgTime = totalTime / (double)(nIters);
+    float billionsOfOpsPerSecond = 1e-9 * nBodies * (nBodies - 1) / 2 / avgTime;
+    printf("%0.3f Billion Interactions / second\n", billionsOfOpsPerSecond);
 
     // Free device memory
     cudaFree(d_bodies.x);
@@ -211,7 +211,7 @@ int main(const int argc, const char** argv) {
     // Free host memory
     free(h_bodies.x);
     free(h_bodies.y);
-    free (h_bodies.z);
+    free(h_bodies.z);
     free(h_bodies.vx);
     free(h_bodies.vy);
     free(h_bodies.vz);
@@ -219,12 +219,3 @@ int main(const int argc, const char** argv) {
 
     return 0;
 }
-
-
-
-
-
-
-
-
-
