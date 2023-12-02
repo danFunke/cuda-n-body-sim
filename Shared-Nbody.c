@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
-#include <GL/gl.h>
-#include <cuda_gl_interop.h>
 #include "timer.cuh"
 #include <ctime>
 #include <cmath>
