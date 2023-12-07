@@ -1,4 +1,3 @@
-
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <math.h>
@@ -10,7 +9,6 @@
 #include "timer.cuh"
 #include <ctime>
 #include <GLFW/glfw3.h>
-
 #include <cmath>
 GLuint pbo;
 cudaGraphicsResource* cudaPboResource;
@@ -29,8 +27,9 @@ inline void cudaCheckError(const char* file, int line) {
  * as well as velocities in the x, y, and z directions.
  */
 
-struct Bodies { float* x, * y, * z, * vx, * vy, * vz, * mass;
-                float *r, * g, * b;
+struct Bodies {
+    float* x, * y, * z, * vx, * vy, * vz, * mass;
+    float* r, * g, * b;
 };    //p is now a struct with separate arrays for each component 
 
 /*
@@ -43,7 +42,7 @@ struct Bodies { float* x, * y, * z, * vx, * vy, * vz, * mass;
 
 __global__ void bodyForce(Bodies p, float dt, int n) {
     int index = threadIdx.x + blockIdx.x * blockDim.x;
- 
+
     extern __shared__ float s_pos[]; // This shared memory will now only store positions
 
     if (index >= n) return; // Ensure we don't go out of bounds
@@ -97,6 +96,8 @@ __global__ void bodyForce(Bodies p, float dt, int n) {
     p.vy[index] += dt * Fy;
     p.vz[index] += dt * Fz;
 }
+
+/*
 GLFWwindow* initOpenGL() {
     if (!glfwInit()) {
         fprintf(stderr, "Failed to initialize GLFW\n");
@@ -113,13 +114,14 @@ GLFWwindow* initOpenGL() {
     glfwMakeContextCurrent(window);
     return window;
 }
+*/
 
 // Function to draw bodies
 void drawBodies(Bodies bodies, int nBodies) {
     glPointSize(2.0f);
     glBegin(GL_POINTS);
     for (int i = 0; i < nBodies; ++i) {
-        glColor4f(bodies.r[i], bodies.g[i], bodies.b[i],0.5f);
+        glColor4f(bodies.r[i], bodies.g[i], bodies.b[i], 0.5f);
         glVertex3f(bodies.x[i], bodies.y[i], bodies.z[i]);
     }
     glEnd();
@@ -204,14 +206,16 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-// Define the center point of your galaxy
-float galaxyCenterX = 0.0f; // Adjust as needed
-float galaxyCenterY = 0.0f;
-float galaxyCenterZ = 0.0f;
+/*
 
-void updateBodyColors(Bodies bodies, int nBodies,float innerRadius, float outerRadius) {
+// Define the center point of your galaxy
+    float galaxyCenterX = 0.0f; // Adjust as needed
+    float galaxyCenterY = 0.0f;
+    float galaxyCenterZ = 0.0f;
+
+void updateBodyColors(Bodies bodies, int nBodies, float innerRadius, float outerRadius) {
     for (int i = 0; i < nBodies; ++i) {
-        
+
         float dx = bodies.x[i] - galaxyCenterX;
         float dy = bodies.y[i] - galaxyCenterY;
         float dz = bodies.z[i] - galaxyCenterZ;
@@ -234,6 +238,40 @@ void updateBodyColors(Bodies bodies, int nBodies,float innerRadius, float outerR
         }
     }
 }
+*/
+
+// Function to update body color based off speed
+void updateBodyColorsSpeed(Bodies bodies, int nBodies) {
+    for (int i = 0; i < nBodies; ++i) {
+
+        float vx = abs(bodies.vx[i]);
+        float vy = abs(bodies.vy[i]);
+        float vz = abs(bodies.vz[i]);
+
+        // Map the speed to a color
+        // Slow to fast: Green-Yellow-Red
+        if (vx < 50.0) {
+            // Green
+            bodies.r[i] = 0.0f; // No red
+            bodies.g[i] = 1.0f; // Full green
+            bodies.b[i] = 0.0f; // No blue
+        }
+        else if (vx < 100.0)
+        {
+            // Yellow
+            bodies.r[i] = 1.0f; // Full red
+            bodies.g[i] = 1.0f; // Full green
+            bodies.b[i] = 0.0f; // No blue
+        }
+        else {
+            // Red
+            bodies.r[i] = 1.0f; // Full red
+            bodies.g[i] = 0.0f; // No green
+            bodies.b[i] = 0.0f; // No blue
+        }
+    }
+}
+
 float maxVelocity = 0.0f; // Initial value
 
 void updateMaxVelocity(Bodies bodies, int nBodies, float& maxVelocity) {
@@ -241,11 +279,10 @@ void updateMaxVelocity(Bodies bodies, int nBodies, float& maxVelocity) {
         float velocityMagnitude = sqrt(bodies.vx[i] * bodies.vx[i] + bodies.vy[i] * bodies.vy[i] + bodies.vz[i] * bodies.vz[i]);
         if (velocityMagnitude > maxVelocity) {
             maxVelocity = velocityMagnitude;
+            printf("Max V: %f\n", maxVelocity);
         }
     }
 }
-
-
 
 int main(const int argc, const char** argv) {
     int deviceId = 0;
@@ -320,23 +357,24 @@ int main(const int argc, const char** argv) {
 
     const float dt = 0.0001f; // Time step
     const int nIters = 10;  // Simulation iterations
-    
 
     size_t threadsPerBlock = 128;
     size_t numberOfBlocks = (nBodies + threadsPerBlock - 1) / threadsPerBlock;
+
     if (!glfwInit()) {
         fprintf(stderr, "Failed to initialize GLFW\n");
         return -1;
     }
 
     // Create a GLFWwindow object
-    GLFWwindow* window = glfwCreateWindow(800, 600, "N-body Simulation", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "N-body Simulation", NULL, NULL);
+    //Sleep(5000);
     if (window == NULL) {
         fprintf(stderr, "Failed to create GLFW window\n");
         glfwTerminate();
         return -1;
     }
- 
+
     glfwMakeContextCurrent(window);
 
     // Register the resize callback
@@ -390,8 +428,12 @@ int main(const int argc, const char** argv) {
         cudaMemcpy(h_bodies.vy, d_bodies.vy, nBodies * sizeof(float), cudaMemcpyDeviceToHost);
         cudaMemcpy(h_bodies.vz, d_bodies.vz, nBodies * sizeof(float), cudaMemcpyDeviceToHost);
 
+        //updateMaxVelocity(h_bodies, nBodies, maxVelocity);
 
-        updateBodyColors(h_bodies, nBodies, innerRadius, outerRadius);
+        //updateBodyColors(h_bodies, nBodies, innerRadius, outerRadius);
+
+        updateBodyColorsSpeed(h_bodies, nBodies); // Color based off of speed
+
         // Draw the bodies
         drawBodies(h_bodies, nBodies); // Make sure to implement this function
 
@@ -401,13 +443,14 @@ int main(const int argc, const char** argv) {
         // Poll for and process events
         glfwPollEvents();
 
-      //  const double tElapsed = GetTimer() / 1000.0;
-     //   printf("Frame time: %f seconds\n", tElapsed);
+        //  const double tElapsed = GetTimer() / 1000.0;
+       //   printf("Frame time: %f seconds\n", tElapsed);
     }
 
     // ... [Cleanup and deallocate resources]
 
     glfwDestroyWindow(window);
+
     glfwTerminate();
 
     // Free device memory
@@ -423,7 +466,7 @@ int main(const int argc, const char** argv) {
     // Free host memory
     free(h_bodies.x);
     free(h_bodies.y);
-    free (h_bodies.z);
+    free(h_bodies.z);
     free(h_bodies.vx);
     free(h_bodies.vy);
     free(h_bodies.vz);
@@ -431,12 +474,3 @@ int main(const int argc, const char** argv) {
 
     return 0;
 }
-
-
-
-
-
-
-
-
-
